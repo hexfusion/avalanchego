@@ -19,6 +19,7 @@ import (
 	"github.com/ava-labs/avalanchego/vms/rpcchainvm/grpcutils"
 	"github.com/ava-labs/avalanchego/vms/rpcchainvm/gruntime"
 	"github.com/ava-labs/avalanchego/vms/rpcchainvm/runtime"
+	"github.com/containers/podman/v4/pkg/bindings"
 	"github.com/containers/podman/v4/pkg/bindings/kube"
 
 	pb "github.com/ava-labs/avalanchego/proto/pb/vm/runtime"
@@ -94,7 +95,12 @@ func Bootstrap(
 		return nil, nil, fmt.Errorf("failed to marshall pod: %w", err)
 	}
 
-	_, err = kube.PlayWithBody(ctx, bytes.NewReader(podBytes), &kube.PlayOptions{})
+	pctx, err := bindings.NewConnection(context.Background(), socket)
+	if err != nil {
+		return nil, nil, fmt.Errorf("failed to create podman conn: %w", err)
+	}
+
+	_, err = kube.PlayWithBody(pctx, bytes.NewReader(podBytes), &kube.PlayOptions{})
 	if err != nil {
 		return nil, nil, fmt.Errorf("failed to start pod: %w", err)
 	}
