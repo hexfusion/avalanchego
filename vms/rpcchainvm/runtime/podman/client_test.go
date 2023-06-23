@@ -62,10 +62,13 @@ func TestSchedulePod(t *testing.T) {
 	ctx, err := bindings.NewConnection(context.Background(), socket)
 	require.NoError(err)
 
-	report, err := kube.PlayWithBody(ctx, bytes.NewReader(podBytes), &kube.PlayOptions{})
+	upreport, err := kube.PlayWithBody(ctx, bytes.NewReader(podBytes), &kube.PlayOptions{})
 	require.NoError(err)
 
-	fmt.Printf("%#v\n", report)
+	fmt.Printf("%#v\n", upreport)
 
+	downreport, err := kube.DownWithBody(ctx, bytes.NewReader(podBytes), kube.DownOptions{})
+	require.NoError(err)
 
+	fmt.Printf("%#v\n", downreport)
 }
