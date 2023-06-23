@@ -19,7 +19,6 @@ import (
 	"github.com/ava-labs/avalanchego/vms/rpcchainvm/grpcutils"
 	"github.com/ava-labs/avalanchego/vms/rpcchainvm/gruntime"
 	"github.com/ava-labs/avalanchego/vms/rpcchainvm/runtime"
-	"github.com/containers/podman/v4/pkg/bindings"
 	"github.com/containers/podman/v4/pkg/bindings/kube"
 
 	pb "github.com/ava-labs/avalanchego/proto/pb/vm/runtime"
@@ -70,11 +69,6 @@ func Bootstrap(
 		return nil, nil, fmt.Errorf("failed to find socket path: %w", err)
 	}
 
-	pctx, err := bindings.NewConnection(context.Background(), socket)
-	if err != nil {
-		return nil, nil, fmt.Errorf("failed to start new podman connection: %w", err)
-	}
-
 	// all this should go into factory
 	obj, _, err := scheme.Codecs.UniversalDeserializer().Decode(config.PodBytes, nil, nil)
 	if err != nil {
@@ -105,8 +99,7 @@ func Bootstrap(
 		return nil, nil, fmt.Errorf("failed to start pod: %w", err)
 	}
 
-	// fix stopper
-	stopper := NewStopper(log, cmd)
+	stopper := NewStopper(log, socket, podBytes)
 
 	// wait for handshake success
 	timeout := time.NewTimer(config.HandshakeTimeout)

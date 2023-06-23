@@ -4,44 +4,47 @@
 package container
 
 import (
+	"bytes"
 	"context"
-	"os/exec"
 	"sync"
-	"syscall"
 
 	"github.com/ava-labs/avalanchego/utils/logging"
 	"github.com/ava-labs/avalanchego/utils/wrappers"
 	"github.com/ava-labs/avalanchego/vms/rpcchainvm/runtime"
+	"github.com/containers/podman/v4/pkg/bindings"
+	"github.com/containers/podman/v4/pkg/bindings/kube"
 	"go.uber.org/zap"
 )
 
-func NewStopper(logger logging.Logger, cmd *exec.Cmd) runtime.Stopper {
+func NewStopper(logger logging.Logger, socketPath string, podBytes []byte) runtime.Stopper {
 	return &stopper{
-		cmd:    cmd,
-		logger: logger,
+		socketPath: socketPath,
+		logger:     logger,
+		podBytes:   podBytes,
 	}
 }
 
 type stopper struct {
-	once   sync.Once
-	cmd    *exec.Cmd
-	logger logging.Logger
+	once       sync.Once
+	socketPath string
+	podBytes   []byte
+	logger     logging.Logger
 }
 
 func (s *stopper) Stop(ctx context.Context) {
 	s.once.Do(func() {
-		stop(ctx, s.logger, s.cmd)
+		stop(ctx, s.socketPath, s.logger, s.podBytes)
 	})
 }
 
-func stop(ctx context.Context, log logging.Logger, cmd *exec.Cmd) {
+func stop(ctx context.Context, socketPath string, log logging.Logger, podBytes []byte) {
 	waitChan := make(chan error)
 	go func() {
 		// attempt graceful shutdown
 		errs := wrappers.Errs{}
-		err := cmd.Process.Signal(syscall.SIGTERM)
+		ctx, err := bindings.NewConnection(context.Background(), socketPath)
 		errs.Add(err)
-		_, err = cmd.Process.Wait()
+		_, err = kube.DownWithBody(ctx, bytes.NewReader(podBytes), kube.DownOptions{})
 		errs.Add(err)
 		waitChan <- errs.Err
 		close(waitChan)
@@ -60,10 +63,6 @@ func stop(ctx context.Context, log logging.Logger, cmd *exec.Cmd) {
 			)
 		}
 	case <-ctx.Done():
-		// force kill
-		err := cmd.Process.Kill()
-		log.Error("subprocess was killed",
-			zap.Error(err),
-		)
+		// force kill TODO whats the heavy hammer here?
 	}
 }
