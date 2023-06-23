@@ -14,11 +14,11 @@ import (
 
 	"go.uber.org/zap"
 
+	"github.com/ava-labs/avalanchego/utils/logging"
 	"github.com/ava-labs/avalanchego/vms/rpcchainvm/grpcutils"
 	"github.com/ava-labs/avalanchego/vms/rpcchainvm/gruntime"
 	"github.com/ava-labs/avalanchego/vms/rpcchainvm/runtime"
-	"github.com/ava-labs/avalanchego/utils/logging"
-
+	"github.com/ava-labs/avalanchego/vms/rpcchainvm/runtime/podman"
 
 	pb "github.com/ava-labs/avalanchego/proto/pb/vm/runtime"
 )
@@ -63,6 +63,8 @@ func Bootstrap(
 	go grpcutils.Serve(listener, server)
 
 	serverAddr := listener.Addr()
+
+	podman.NewClient()
 
 	// set pod ENV
 	// cmd.Env = append(cmd.Env, fmt.Sprintf("%s=%s", runtime.EngineAddressKey, serverAddr.String()))
