@@ -112,16 +112,21 @@ func (getter *vmGetter) Get() (map[ids.ID]vms.Factory, map[ids.ID]vms.Factory, e
 			return nil, nil, err
 		}
 
+		var runtimeType rpcchainvm.RuntimeType
 		if !isPod {
-			unregisteredVMs[vmID] = rpcchainvm.NewFactory(
-				filepath.Join(getter.config.PluginDirectory, file.Name()),
-				getter.config.CPUTracker,
-				getter.config.RuntimeTracker,
-			)
+			runtimeType = rpcchainvm.RuntimeSubprocess
 		} else {
 			// TODO: use the container implementation here
 			fmt.Printf("Attempt to use the container implementation to create a VM Factory for: %s\n", file.Name())
+			runtimeType = rpcchainvm.RuntimeContainer
 		}
+
+		unregisteredVMs[vmID] = rpcchainvm.NewFactory(
+			filepath.Join(getter.config.PluginDirectory, file.Name()),
+			runtimeType,
+			getter.config.CPUTracker,
+			getter.config.RuntimeTracker,
+		)
 	}
 	return registeredVMs, unregisteredVMs, nil
 }

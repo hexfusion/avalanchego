@@ -7,17 +7,13 @@ import (
 	"bytes"
 	"context"
 	"fmt"
-	"io"
 	"net"
-	"os"
-	"strings"
 	"time"
 
+	"github.com/ghodss/yaml"
 	"go.uber.org/zap"
 	v1 "k8s.io/api/core/v1"
 	"k8s.io/client-go/kubernetes/scheme"
-	"github.com/ghodss/yaml"
-
 
 	"github.com/ava-labs/avalanchego/utils/logging"
 	"github.com/ava-labs/avalanchego/vms/rpcchainvm/grpcutils"
@@ -30,10 +26,7 @@ import (
 )
 
 type Config struct {
-	// Stderr of the VM process written to this writer.
-	Stderr io.Writer
-	// Stdout of the VM process written to this writer.
-	Stdout io.Writer
+	PodBytes []byte
 	// Duration engine server will wait for handshake success.
 	HandshakeTimeout time.Duration
 	Log              logging.Logger
@@ -83,7 +76,7 @@ func Bootstrap(
 	}
 
 	// all this should go into factory
-	obj, _, err := scheme.Codecs.UniversalDeserializer().Decode([]byte(podYamlBytes), nil, nil)
+	obj, _, err := scheme.Codecs.UniversalDeserializer().Decode(config.PodBytes, nil, nil)
 	if err != nil {
 		return nil, nil, fmt.Errorf("failed to derialize pod yaml: %w", err)
 	}
@@ -136,8 +129,8 @@ func Bootstrap(
 	)
 
 	status := &Status{
-		PodBytes:  podBytes,
-		Addr: intitializer.vmAddr,
+		PodBytes: podBytes,
+		Addr:     intitializer.vmAddr,
 	}
 	return status, stopper, nil
 }

@@ -34,7 +34,6 @@ func (s *stopper) Stop(ctx context.Context) {
 	})
 }
 
-
 func stop(ctx context.Context, log logging.Logger, cmd *exec.Cmd) {
 	waitChan := make(chan error)
 	go func() {
