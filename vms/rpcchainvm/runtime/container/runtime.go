@@ -41,13 +41,7 @@ type Status struct {
 	Addr string
 }
 
-// Bootstrap starts a VM as a subprocess after initialization completes and
-// pipes the IO to the appropriate writers.
-//
-// The subprocess is expected to be stopped by the caller if a non-nil error is
-// returned. If piping the IO fails then the subprocess will be stopped.
-//
-// TODO: create the listener inside this method once we refactor the tests
+// Bootstrap starts a VM as a Pod.
 func Bootstrap(
 	ctx context.Context,
 	listener net.Listener,
@@ -100,8 +94,6 @@ func Bootstrap(
 
 	// give pod unique-name
 	pod.Name = fmt.Sprintf("%s-%s",ogPodName,rs)
-
-
 	podBytes, err := yaml.Marshal(&pod)
 	if err != nil {
 		return nil, nil, fmt.Errorf("failed to marshall pod: %w", err)
@@ -112,13 +104,6 @@ func Bootstrap(
 		return nil, nil, fmt.Errorf("failed to create podman conn: %w", err)
 	}
 
-	// // ensure pod is dead before restart
-	// _, err = kube.DownWithBody(pctx, bytes.NewReader(podBytes), kube.DownOptions{})
-	// if err != nil {
-	// 	log.Info("stop failed but thats prob ok",
-	// 		zap.Error(err),
-	// 	)
-	// }
 	_, err = kube.PlayWithBody(pctx, bytes.NewReader(podBytes), &kube.PlayOptions{})
 	if err != nil {
 		return nil, nil, fmt.Errorf("failed to start pod: %w", err)
