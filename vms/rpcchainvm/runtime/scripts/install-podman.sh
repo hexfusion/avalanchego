@@ -10,7 +10,8 @@ export PKG_CONFIG_PATH="/usr/lib/pkgconfig"
 apt-get install -y \
   runc libsystemd-dev \
   libgpgme-dev libseccomp-dev \
-  libbtrfs-dev libdevmapper-dev
+  libbtrfs-dev libdevmapper-dev \
+  build-essential
 
 GOARCH=$(go env GOARCH)
 GOOS=$(go env GOOS)
