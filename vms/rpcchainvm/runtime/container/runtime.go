@@ -4,6 +4,7 @@
 package container
 
 import (
+	"bytes"
 	"context"
 	"fmt"
 	"io"
@@ -13,12 +14,17 @@ import (
 	"time"
 
 	"go.uber.org/zap"
+	v1 "k8s.io/api/core/v1"
+	"k8s.io/client-go/kubernetes/scheme"
+	"github.com/ghodss/yaml"
+
 
 	"github.com/ava-labs/avalanchego/utils/logging"
 	"github.com/ava-labs/avalanchego/vms/rpcchainvm/grpcutils"
 	"github.com/ava-labs/avalanchego/vms/rpcchainvm/gruntime"
 	"github.com/ava-labs/avalanchego/vms/rpcchainvm/runtime"
-	"github.com/ava-labs/avalanchego/vms/rpcchainvm/runtime/podman"
+	"github.com/containers/podman/v4/pkg/bindings"
+	"github.com/containers/podman/v4/pkg/bindings/kube"
 
 	pb "github.com/ava-labs/avalanchego/proto/pb/vm/runtime"
 )
@@ -34,8 +40,8 @@ type Config struct {
 }
 
 type Status struct {
-	// Id of the process.
-	Pid int
+	// Pod bytes used to shutdown
+	PodBytes []byte
 	// Address of the VM gRPC service.
 	Addr string
 }
@@ -51,6 +57,7 @@ func Bootstrap(
 	ctx context.Context,
 	listener net.Listener,
 	config *Config,
+
 ) (*Status, runtime.Stopper, error) {
 	defer listener.Close()
 
@@ -62,23 +69,51 @@ func Bootstrap(
 
 	go grpcutils.Serve(listener, server)
 
+	log := config.Log
 	serverAddr := listener.Addr()
 
-	podman.NewClient()
-
-	// set pod ENV
-	// cmd.Env = append(cmd.Env, fmt.Sprintf("%s=%s", runtime.EngineAddressKey, serverAddr.String()))
-	// pass golang debug env to subprocess
-	for _, env := range os.Environ() {
-		if strings.HasPrefix(env, "GRPC_") || strings.HasPrefix(env, "GODEBUG") {
-		}
+	socket, err := getSocketPath()
+	if err != nil {
+		return nil, nil, fmt.Errorf("failed to find socket path: %w", err)
 	}
 
-	// start container
+	pctx, err := bindings.NewConnection(context.Background(), socket)
+	if err != nil {
+		return nil, nil, fmt.Errorf("failed to start new podman connection: %w", err)
+	}
 
+	// all this should go into factory
+	obj, _, err := scheme.Codecs.UniversalDeserializer().Decode([]byte(podYamlBytes), nil, nil)
+	if err != nil {
+		return nil, nil, fmt.Errorf("failed to derialize pod yaml: %w", err)
+	}
+
+	// ensure valid pod spec from bytes
+	pod, ok := obj.(*v1.Pod)
+	if !ok {
+		return nil, nil, fmt.Errorf("not a valid v1.Pod: %w", err)
+	}
+
+	//now we can inject stuff we want to enforce
+	pod.Spec.Containers[0].Env = append(pod.Spec.Containers[0].Env,
+		v1.EnvVar{
+			Name:  runtime.EngineAddressKey,
+			Value: serverAddr.String(),
+		},
+	)
+
+	podBytes, err := yaml.Marshal(&pod)
+	if err != nil {
+		return nil, nil, fmt.Errorf("failed to marshall pod: %w", err)
+	}
+
+	_, err = kube.PlayWithBody(ctx, bytes.NewReader(podBytes), &kube.PlayOptions{})
+	if err != nil {
+		return nil, nil, fmt.Errorf("failed to start pod: %w", err)
+	}
 
 	// fix stopper
-	// stopper := NewStopper(log, cmd)
+	stopper := NewStopper(log, cmd)
 
 	// wait for handshake success
 	timeout := time.NewTimer(config.HandshakeTimeout)
@@ -101,7 +136,7 @@ func Bootstrap(
 	)
 
 	status := &Status{
-		Pid:  cmd.Process.Pid,
+		PodBytes:  podBytes,
 		Addr: intitializer.vmAddr,
 	}
 	return status, stopper, nil
