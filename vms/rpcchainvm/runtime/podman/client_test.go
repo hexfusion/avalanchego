@@ -19,16 +19,16 @@ var podYamlBytes = `
 apiVersion: v1
 kind: Pod
 metadata:
-  labels:
-    app: demo-pod
-  name: demo-pod
+  name: subnet-evm
 spec:
+  hostNetwork: true
   containers:
-  - image: registry.fedoraproject.org/fedora:latest
-    name: demo
-    ports:
-    - containerPort: 80
-      hostPort: 8000`
+  - name: subnet-evm
+    image: dansoveravax/subnet-evm-container:v0.0.1-amd64
+    resources:
+      requests:
+        memory: 600Mi
+        cpu: 300m`
 
 // go test -v -timeout 30s -run ^TestSchedulePod$ github.com/ava-labs/avalanchego/vms/rpcchainvm/runtime/podman
 func TestSchedulePod(t *testing.T) {
