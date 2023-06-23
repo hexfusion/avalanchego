@@ -11,7 +11,15 @@ apt-get install -y \
   runc libsystemd-dev \
   libgpgme-dev libseccomp-dev \
   libbtrfs-dev libdevmapper-dev \
-  build-essential
+  build-essential btrfs-progs \
+  crun go-md2man \
+  iptables libassuan-dev \
+  libbtrfs-dev libc6-dev \
+  libglib2.0-dev libgpg-error-dev \
+  libprotobuf-dev libprotobuf-c-dev \
+  libseccomp-dev libselinux1-dev \
+  libsystemd-dev pkg-config \
+  uidmap catatonit
 
 GOARCH=$(go env GOARCH)
 GOOS=$(go env GOOS)
