@@ -1,0 +1,13 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: subnet-evm
+spec:
+  hostNetwork: true
+  containers:
+  - name: subnet-evm
+    image: dansoveravax/subnet-evm-container:v0.0.1-amd64
+    resources:
+      requests:
+        memory: 600Mi
+        cpu: 300m
