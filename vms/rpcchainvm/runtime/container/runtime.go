@@ -100,6 +100,13 @@ func Bootstrap(
 		return nil, nil, fmt.Errorf("failed to create podman conn: %w", err)
 	}
 
+	// ensure pod is dead before restart
+	_, err = kube.DownWithBody(pctx, bytes.NewReader(podBytes), kube.DownOptions{})
+	if err != nil {
+		log.Info("stop failed but thats prob ok",
+			zap.Error(err),
+		)
+	}
 	_, err = kube.PlayWithBody(pctx, bytes.NewReader(podBytes), &kube.PlayOptions{})
 	if err != nil {
 		return nil, nil, fmt.Errorf("failed to start pod: %w", err)

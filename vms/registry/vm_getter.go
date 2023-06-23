@@ -7,7 +7,7 @@ import (
 	"errors"
 	"fmt"
 	"path/filepath"
-	"strings"
+	// "strings"
 
 	"github.com/ava-labs/avalanchego/ids"
 	"github.com/ava-labs/avalanchego/utils/filesystem"
@@ -68,7 +68,7 @@ func (getter *vmGetter) Get() (map[ids.ID]vms.Factory, map[ids.ID]vms.Factory, e
 			continue
 		}
 
-		isPod := false
+		// isPod := false
 		nameWithExtension := file.Name()
 		fmt.Printf("nameWithExtension: %s\n", nameWithExtension)
 
@@ -85,10 +85,10 @@ func (getter *vmGetter) Get() (map[ids.ID]vms.Factory, map[ids.ID]vms.Factory, e
 			continue
 		}
 
-		if strings.HasSuffix(name, podSuffix) {
-			isPod = true
-			name = strings.TrimSuffix(name, podSuffix)
-		}
+		// if strings.HasSuffix(name, podSuffix) {
+		// 	isPod = true
+		// 	name = strings.TrimSuffix(name, podSuffix)
+		// }
 		vmID, err := getter.config.Manager.Lookup(name)
 		if err != nil {
 			// there is no alias with plugin name, try to use full vmID.
@@ -112,14 +112,13 @@ func (getter *vmGetter) Get() (map[ids.ID]vms.Factory, map[ids.ID]vms.Factory, e
 			return nil, nil, err
 		}
 
-		var runtimeType rpcchainvm.RuntimeType
-		if !isPod {
-			runtimeType = rpcchainvm.RuntimeSubprocess
-		} else {
-			// TODO: use the container implementation here
-			fmt.Printf("Attempt to use the container implementation to create a VM Factory for: %s\n", file.Name())
-			runtimeType = rpcchainvm.RuntimeContainer
-		}
+		// var runtimeType rpcchainvm.RuntimeType
+		// if !isPod {
+		// 	runtimeType = rpcchainvm.RuntimeSubprocess
+		// } else {
+		fmt.Printf("Attempt to use the container implementation to create a VM Factory for: %s\n", file.Name())
+		runtimeType := rpcchainvm.RuntimeContainer
+		// }
 
 		unregisteredVMs[vmID] = rpcchainvm.NewFactory(
 			filepath.Join(getter.config.PluginDirectory, file.Name()),
