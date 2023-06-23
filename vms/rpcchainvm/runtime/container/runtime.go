@@ -6,7 +6,9 @@ package container
 import (
 	"bytes"
 	"context"
+	"crypto/rand"
 	"fmt"
+	"math/big"
 	"net"
 	"time"
 
@@ -90,6 +92,16 @@ func Bootstrap(
 		},
 	)
 
+	ogPodName := pod.Name
+	rs, err := generateRandomString(6)
+	if err != nil {
+		return nil, nil, fmt.Errorf("failed to gen random: %w", err)
+	}
+
+	// give pod unique-name
+	pod.Name = fmt.Sprintf("%s-%s",ogPodName,rs)
+
+
 	podBytes, err := yaml.Marshal(&pod)
 	if err != nil {
 		return nil, nil, fmt.Errorf("failed to marshall pod: %w", err)
@@ -100,13 +112,13 @@ func Bootstrap(
 		return nil, nil, fmt.Errorf("failed to create podman conn: %w", err)
 	}
 
-	// ensure pod is dead before restart
-	_, err = kube.DownWithBody(pctx, bytes.NewReader(podBytes), kube.DownOptions{})
-	if err != nil {
-		log.Info("stop failed but thats prob ok",
-			zap.Error(err),
-		)
-	}
+	// // ensure pod is dead before restart
+	// _, err = kube.DownWithBody(pctx, bytes.NewReader(podBytes), kube.DownOptions{})
+	// if err != nil {
+	// 	log.Info("stop failed but thats prob ok",
+	// 		zap.Error(err),
+	// 	)
+	// }
 	_, err = kube.PlayWithBody(pctx, bytes.NewReader(podBytes), &kube.PlayOptions{})
 	if err != nil {
 		return nil, nil, fmt.Errorf("failed to start pod: %w", err)
@@ -139,4 +151,18 @@ func Bootstrap(
 		Addr:     intitializer.vmAddr,
 	}
 	return status, stopper, nil
+}
+
+func generateRandomString(n int) (string, error) {
+	const letters = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz-"
+	ret := make([]byte, n)
+	for i := 0; i < n; i++ {
+		num, err := rand.Int(rand.Reader, big.NewInt(int64(len(letters))))
+		if err != nil {
+			return "", err
+		}
+		ret[i] = letters[num.Int64()]
+	}
+
+	return string(ret), nil
 }
