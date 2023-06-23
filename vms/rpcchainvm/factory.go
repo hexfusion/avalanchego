@@ -83,10 +83,9 @@ func (f *factory) New(log logging.Logger) (interface{}, error) {
 		f.runtimeTracker.TrackRuntime(stopper)
 
 	case RuntimeContainer:
-		podPath := fmt.Sprintf("%s_pod.yaml", f.path)
-		podBytes, err := os.ReadFile(podPath)
+		podBytes, err := os.ReadFile(f.path)
 		if err != nil {
-			return nil, fmt.Errorf("failed to read pod yaml: %q", podPath)
+			return nil, fmt.Errorf("failed to read pod yaml: %q", f.path)
 		}
 		config := &container.Config{
 			PodBytes:         podBytes,
